@@ -1,0 +1,14 @@
+# Uses the default serial bootloader to program
+# Use "make upload" to upload to device
+
+ARDUINO_DIR = /Applications/Arduino.app/Contents/Resources/Java
+
+TARGET       = SKETCH_NAME
+MCU          = atmega168
+F_CPU        = 16000000
+ARDUINO_PORT = /dev/tty.usbserial-*
+
+# Separate libraries with spaces
+ARDUINO_LIBS = Servo LiquidCrystal EEPROM
+
+include ./Arduino.mk
