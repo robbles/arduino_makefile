@@ -63,7 +63,7 @@
 #
 #    ARDUINO_DIR  - Where the Arduino software has been unpacked
 #    TARGET       - The basename used for the final files. Canonically
-#                   this would match the .pde file, but it's not needed
+#                   this would match the .ino file, but it's not needed
 #                   here: you could always set it to xx if you wanted!
 #    ARDUINO_LIBS - A list of any libraries used by the sketch (we assume
 #                   these are in $(ARDUINO_DIR)/libraries
@@ -77,7 +77,7 @@
 #
 # All of the object files are created in the build-cli subdirectory
 # All sources should be in the current directory and can include:
-#  - at most one .pde file which will be treated as C++ after the standard
+#  - at most one .ino file which will be treated as C++ after the standard
 #    Arduino header and footer have been affixed.
 #  - any number of .c, .cpp, .s and .h files
 #
@@ -141,6 +141,12 @@ ifndef AVRDUDE_CONF
 AVRDUDE_CONF     = $(ARDUINO_ETC_PATH)/avrdude.conf
 endif
 
+ifndef ARDUINO_VARIANT
+	ARDUINO_PIN_DEFS = $(ARDUINO_DIR)/hardware/arduino/variants/standard
+else
+	ARDUINO_PIN_DEFS = $(ARDUINO_DIR)/hardware/arduino/variants/$(ARDUINO_VARIANT)
+endif
+
 ARDUINO_LIB_PATH  = $(ARDUINO_DIR)/libraries
 ARDUINO_CORE_PATH = $(ARDUINO_DIR)/hardware/arduino/cores/arduino
 
@@ -171,10 +177,10 @@ OBJDIR  	  = build-cli
 LOCAL_C_SRCS    = $(wildcard *.c)
 LOCAL_CPP_SRCS  = $(wildcard *.cpp)
 LOCAL_CC_SRCS   = $(wildcard *.cc)
-LOCAL_PDE_SRCS  = $(wildcard *.pde)
+LOCAL_INO_SRCS  = $(wildcard *.ino)
 LOCAL_AS_SRCS   = $(wildcard *.S)
 LOCAL_OBJ_FILES = $(LOCAL_C_SRCS:.c=.o) $(LOCAL_CPP_SRCS:.cpp=.o) \
-		$(LOCAL_CC_SRCS:.cc=.o) $(LOCAL_PDE_SRCS:.pde=.o) \
+		$(LOCAL_CC_SRCS:.cc=.o) $(LOCAL_INO_SRCS:.ino=.o) \
 		$(LOCAL_AS_SRCS:.S=.o)
 LOCAL_OBJS      = $(patsubst %,$(OBJDIR)/%,$(LOCAL_OBJ_FILES))
 
@@ -196,9 +202,12 @@ endif
 ifdef ARDUINO_LIB_PATH
 LIB_C_SRCS     = $(wildcard $(patsubst %,$(ARDUINO_LIB_PATH)/%/*.c,$(ARDUINO_LIBS)))
 LIB_CPP_SRCS     = $(wildcard $(patsubst %,$(ARDUINO_LIB_PATH)/%/*.cpp,$(ARDUINO_LIBS)))
-LIB_OBJ_FILES  = $(LIB_C_SRCS:.c=.o) $(LIB_CPP_SRCS:.cpp=.o)
-LIB_OBJS       = $(patsubst $(ARDUINO_LIB_PATH)/%,  \
-			$(OBJDIR)/%,$(LIB_OBJ_FILES))
+LIB_C_UTILITY_SRCS     = $(wildcard $(patsubst %,$(ARDUINO_LIB_PATH)/%/utility/*.c,$(ARDUINO_LIBS)))
+LIB_CPP_UTILITY_SRCS     = $(wildcard $(patsubst %,$(ARDUINO_LIB_PATH)/%/utility/*.cpp,$(ARDUINO_LIBS)))
+
+#LIB_OBJ_FILES  = $(LIB_C_SRCS:.c=.o) $(LIB_CPP_SRCS:.cpp=.o)
+LIB_OBJ_FILES  = $(LIB_C_SRCS:.c=.o) $(LIB_C_UTILITY_SRCS:.c=.o) $(LIB_CPP_SRCS:.cpp=.o) $(LIB_CPP_UTILITY_SRCS:.cpp=.o) 
+LIB_OBJS       = $(patsubst $(ARDUINO_LIB_PATH)/%,$(OBJDIR)/%,$(LIB_OBJ_FILES))
 endif
 
 # all the objects!
@@ -230,14 +239,16 @@ CAT     = cat
 ECHO    = echo
 
 # General arguments
-SYS_LIBS      = $(patsubst %,$(ARDUINO_LIB_PATH)/%,$(ARDUINO_LIBS))
-SYS_INCLUDES  = $(patsubst %,-I%,$(SYS_LIBS))
-SYS_OBJS      = $(wildcard $(patsubst %,%/*.o,$(SYS_LIBS)))
+SYS_LIBS      	  = $(patsubst %,$(ARDUINO_LIB_PATH)/%,$(ARDUINO_LIBS))
+SYS_INCLUDES  	  = $(patsubst %,-I%,$(SYS_LIBS))
+SYS_UTIL_INCLUDES = $(patsubst %,-I%/utility,$(SYS_LIBS))
+SYS_OBJS      	  = $(wildcard $(patsubst %,%/*.o,$(SYS_LIBS)))
 
 CPPFLAGS      = -mmcu=$(MCU) -DF_CPU=$(F_CPU) \
 			-I. -I$(ARDUINO_CORE_PATH) \
+			-I$(ARDUINO_PIN_DEFS) \
 			-I$(ARDUINO_LIB_PATH) \
-			$(SYS_INCLUDES) -g -Os -w -Wall \
+			$(SYS_INCLUDES) $(SYS_UTIL_INCLUDES) -g -Os -w -Wall \
 			-ffunction-sections -fdata-sections
 CFLAGS        = -std=gnu99
 CXXFLAGS      = -fno-exceptions
@@ -245,7 +256,7 @@ ASFLAGS       = -mmcu=$(MCU) -I. -x assembler-with-cpp
 LDFLAGS       = -mmcu=$(MCU) -lm -Wl,--gc-sections -Os
 
 # Rules for making a CPP file from the main sketch (.cpe)
-PDEHEADER     = \\\#include \"WProgram.h\"
+INOHEADER     = \\\#include \"Arduino.h\"
 
 # Implicit rules for building everything (needed to get everything in
 # the right directory)
@@ -288,9 +299,9 @@ $(OBJDIR)/%.d: %.S
 $(OBJDIR)/%.d: %.s
 	$(CC) -MM $(CPPFLAGS) $(ASFLAGS) $< -MF $@ -MT $(@:.d=.o)
 
-# the pde -> cpp -> o file
-$(OBJDIR)/%.cpp: %.pde
-	$(ECHO) $(PDEHEADER) > $@
+# the ino -> cpp -> o file
+$(OBJDIR)/%.cpp: %.ino
+	$(ECHO) $(INOHEADER) > $@
 	$(CAT)  $< >> $@
 
 $(OBJDIR)/%.o: $(OBJDIR)/%.cpp
@@ -311,13 +322,13 @@ $(OBJDIR)/%.o: $(ARDUINO_CORE_PATH)/%.cpp
 # library files
 $(OBJDIR)/%.o: $(ARDUINO_LIB_PATH)/%.c
 	@$(ECHO) "Building library file $(notdir $<)"
-	@mkdir -p $(dir $<)
-	@$(CC) -c $(CPPFLAGS) $(CFLAGS) $< -o $@
+	mkdir -p $(dir $@)
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $< -o $@
 
 $(OBJDIR)/%.o: $(ARDUINO_LIB_PATH)/%.cpp
 	@$(ECHO) "Building library file $(notdir $<)"
-	@mkdir -p $(dir $@)
-	@$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
+	mkdir -p $(dir $@)
+	$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
 
 # various object conversions
 $(OBJDIR)/%.hex: $(OBJDIR)/%.elf
@@ -404,6 +415,14 @@ upload:		reset raw_upload
 raw_upload:	$(TARGET_HEX)
 		$(AVRDUDE) $(AVRDUDE_COM_OPTS) $(AVRDUDE_ARD_OPTS) \
 			-U flash:w:$(TARGET_HEX):i
+
+test_libraries:
+	@echo LIB_C_SRCS: ${LIB_C_SRCS}
+	@echo LIB_CPP_SRCS: ${LIB_CPP_SRCS}
+	@echo LIB_C_UTILITY_SRCS: ${LIB_C_UTILITY_SRCS}
+	@echo LIB_CPP_UTILITY_SRCS: ${LIB_CPP_UTILITY_SRCS}
+	@echo LIB_OBJ_FILES: ${LIB_OBJ_FILES}
+	@echo LIB_OBJS: ${LIB_OBJS}
 
 # stty on MacOS likes -F, but on Debian it likes -f redirecting
 # stdin/out appears to work but generates a spurious error on MacOS at
