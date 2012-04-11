@@ -453,7 +453,7 @@ clean:
 		$(REMOVE) -r $(dir $(LIB_OBJS))
 
 depends:	$(DEPS)
-		cat $(DEPS) > $(DEP_FILE)
+		@cat $(DEPS) > $(DEP_FILE)
 
 monitor :
 		$(kill-monitor)

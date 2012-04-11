@@ -1,5 +1,4 @@
-ABOUT
-=====
+## ABOUT
 
 I adapted this from the Makefile at
 [http://mjo.tc/atelier/2009/02/arduino-cli.html](http://mjo.tc/atelier/2009/02/arduino-cli.html).
@@ -9,8 +8,7 @@ Makefiles.
 
 UPDATE: Upgraded to support Arduino 1.0!
 
-STANDARD ARDUINO WORKFLOW
-=========================
+## STANDARD ARDUINO WORKFLOW
 
 Given a normal sketch directory, all you need to do is to create
 a small Makefile which defines a few things, and then includes this one.
@@ -61,8 +59,7 @@ Besides make upload you can also
 - `make raw_upload` : upload without first resetting
 
 
-ARDUINO WITH OTHER TOOLS
-========================
+## ARDUINO WITH OTHER TOOLS
 
 If the tools aren't in the Arduino distribution, then you need to 
 specify their location:
@@ -71,8 +68,7 @@ specify their location:
     AVRDUDE_CONF   = /etc/avrdude/avrdude.conf
 
 
-ARDUINO WITH ISP
-================
+## ARDUINO WITH ISP
 
 You need to specify some details of your ISP programmer and might
 also need to specify the fuse values:
