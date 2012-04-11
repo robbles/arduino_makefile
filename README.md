@@ -7,6 +7,8 @@ I adapted this from the Makefile at
 Take a look at `Makefile.serial` and `Makefile.avrispmkii` for example
 Makefiles.
 
+UPDATE: Upgraded to support Arduino 1.0!
+
 STANDARD ARDUINO WORKFLOW
 =========================
 
