@@ -270,34 +270,34 @@ INOHEADER     = \\\#include \"Arduino.h\"
 # .o rules are for objects, .d for dependency tracking
 # there seems to be an awful lot of duplication here!!!
 $(OBJDIR)/%.o: %.c
-	$(CC) -c $(CPPFLAGS) $(CFLAGS) $< -o $@
+	@$(CC) -c $(CPPFLAGS) $(CFLAGS) $< -o $@
 
 $(OBJDIR)/%.o: %.cc
-	$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
+	@$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
 
 $(OBJDIR)/%.o: %.cpp
-	$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
+	@$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
 
 $(OBJDIR)/%.o: %.S
-	$(CC) -c $(CPPFLAGS) $(ASFLAGS) $< -o $@
+	@$(CC) -c $(CPPFLAGS) $(ASFLAGS) $< -o $@
 
 $(OBJDIR)/%.o: %.s
-	$(CC) -c $(CPPFLAGS) $(ASFLAGS) $< -o $@
+	@$(CC) -c $(CPPFLAGS) $(ASFLAGS) $< -o $@
 
 $(OBJDIR)/%.d: %.c
-	$(CC) -MM $(CPPFLAGS) $(CFLAGS) $< -MF $@ -MT $(@:.d=.o)
+	@$(CC) -MM $(CPPFLAGS) $(CFLAGS) $< -MF $@ -MT $(@:.d=.o)
 
 $(OBJDIR)/%.d: %.cc
-	$(CXX) -MM $(CPPFLAGS) $(CXXFLAGS) $< -MF $@ -MT $(@:.d=.o)
+	@$(CXX) -MM $(CPPFLAGS) $(CXXFLAGS) $< -MF $@ -MT $(@:.d=.o)
 
 $(OBJDIR)/%.d: %.cpp
-	$(CXX) -MM $(CPPFLAGS) $(CXXFLAGS) $< -MF $@ -MT $(@:.d=.o)
+	@$(CXX) -MM $(CPPFLAGS) $(CXXFLAGS) $< -MF $@ -MT $(@:.d=.o)
 
 $(OBJDIR)/%.d: %.S
-	$(CC) -MM $(CPPFLAGS) $(ASFLAGS) $< -MF $@ -MT $(@:.d=.o)
+	@$(CC) -MM $(CPPFLAGS) $(ASFLAGS) $< -MF $@ -MT $(@:.d=.o)
 
 $(OBJDIR)/%.d: %.s
-	$(CC) -MM $(CPPFLAGS) $(ASFLAGS) $< -MF $@ -MT $(@:.d=.o)
+	@$(CC) -MM $(CPPFLAGS) $(ASFLAGS) $< -MF $@ -MT $(@:.d=.o)
 
 # the ino -> cpp -> o file
 $(OBJDIR)/%.cpp: %.ino
@@ -305,10 +305,10 @@ $(OBJDIR)/%.cpp: %.ino
 	$(CAT)  $< >> $@
 
 $(OBJDIR)/%.o: $(OBJDIR)/%.cpp
-	$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
+	@$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
 
 $(OBJDIR)/%.d: $(OBJDIR)/%.cpp
-	$(CXX) -MM $(CPPFLAGS) $(CXXFLAGS) $< -MF $@ -MT $(@:.d=.o)
+	@$(CXX) -MM $(CPPFLAGS) $(CXXFLAGS) $< -MF $@ -MT $(@:.d=.o)
 
 # core files
 $(OBJDIR)/%.o: $(ARDUINO_CORE_PATH)/%.c
@@ -322,17 +322,18 @@ $(OBJDIR)/%.o: $(ARDUINO_CORE_PATH)/%.cpp
 # library files
 $(OBJDIR)/%.o: $(ARDUINO_LIB_PATH)/%.c
 	@$(ECHO) "Building library file $(notdir $<)"
-	mkdir -p $(dir $@)
-	$(CC) -c $(CPPFLAGS) $(CFLAGS) $< -o $@
+	@mkdir -p $(dir $@)
+	@$(CC) -c $(CPPFLAGS) $(CFLAGS) $< -o $@
 
 $(OBJDIR)/%.o: $(ARDUINO_LIB_PATH)/%.cpp
 	@$(ECHO) "Building library file $(notdir $<)"
-	mkdir -p $(dir $@)
-	$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
+	@mkdir -p $(dir $@)
+	@$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) $< -o $@
 
 # various object conversions
 $(OBJDIR)/%.hex: $(OBJDIR)/%.elf
-	$(OBJCOPY) -O ihex -R .eeprom $< $@
+	@$(ECHO) "Building output hex file $@"
+	@$(OBJCOPY) -O ihex -R .eeprom $< $@
 
 $(OBJDIR)/%.eep: $(OBJDIR)/%.elf
 	-$(OBJCOPY) -j .eeprom --set-section-flags=.eeprom="alloc,load" \
@@ -399,18 +400,19 @@ AVRDUDE_ISP_OPTS = -P $(ISP_PORT) -c $(ISP_PROG)
 # Explicit targets start here
 #
 
-all: 		$(OBJDIR) $(TARGET_HEX)
+all: 		$(OBJDIR) $(TARGET_HEX) done
 
 $(OBJDIR):
 		mkdir $(OBJDIR)
 
 $(TARGET_ELF): 	$(OBJS)
-		$(CC) $(LDFLAGS) -o $@ $(OBJS) $(SYS_OBJS)
+	@$(ECHO) "Building target $@"
+	@$(CC) $(LDFLAGS) -o $@ $(OBJS) $(SYS_OBJS)
 
 $(DEP_FILE):	$(OBJDIR) $(DEPS)
 		cat $(DEPS) > $(DEP_FILE)
 
-upload:		reset raw_upload
+upload:		reset raw_upload done
 
 raw_upload:	$(TARGET_HEX)
 		$(AVRDUDE) $(AVRDUDE_COM_OPTS) $(AVRDUDE_ARD_OPTS) \
@@ -457,7 +459,9 @@ monitor :
 		$(kill-monitor)
 		$(run-monitor)
 
+done:
+	@$(ECHO) "All done!"
 
-.PHONY:	all clean depends upload raw_upload reset
+.PHONY:	all clean depends upload raw_upload reset done
 
-include $(DEP_FILE)
+-include $(DEP_FILE)
